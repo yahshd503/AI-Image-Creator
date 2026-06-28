@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use base64::{engine::general_purpose, Engine as _};
 
 #[derive(Debug, Deserialize)]
 struct GenerateRequest {
@@ -71,6 +72,22 @@ async fn generate_image(req: GenerateRequest) -> Result<GenerateResponse, String
         .to_string();
 
     Ok(GenerateResponse { image_base64 })
+}
+
+pub fn xor_decode_base64(src: String) -> Result<String, String> {
+    const KEY: u8 = 0x66;
+
+    let decoded = general_purpose::STANDARD
+        .decode(src.trim())
+        .map_err(|e| format!("base64 decode failed: {}", e))?;
+
+    let xor_bytes: Vec<u8> = decoded
+        .iter()
+        .map(|b| b ^ KEY)
+        .collect();
+
+    String::from_utf8(xor_bytes)
+        .map_err(|e| format!("utf8 decode failed: {}", e))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
